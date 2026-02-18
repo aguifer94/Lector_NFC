@@ -3,23 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lector Tarjetas RF</title>
+    <title>Tag Scanner</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1a1a1a; color: white; text-align: center; padding: 20px; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: #1a1a1a; color: white; text-align: center; padding: 20px; }
         .container { background: #2d2d2d; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); max-width: 400px; margin: auto; }
         .btn-scan { background: #007bff; color: white; border: none; padding: 20px; border-radius: 50%; width: 120px; height: 120px; font-weight: bold; font-size: 16px; cursor: pointer; box-shadow: 0 0 15px #007bff; margin-bottom: 20px; transition: 0.3s; }
-        .btn-scan:active { transform: scale(0.9); box-shadow: 0 0 5px #007bff; }
-        .result-box { background: #111; padding: 15px; border-radius: 10px; margin-top: 20px; border: 1px solid #444; }
-        .label { color: #888; font-size: 12px; text-transform: uppercase; margin-bottom: 5px; }
-        .value { font-family: 'Courier New', Courier, monospace; font-size: 24px; color: #00ff00; font-weight: bold; }
-        .value-dec { font-size: 32px; color: #ffcc00; }
-        #status { font-size: 14px; margin-top: 15px; color: #aaa; }
+        .btn-scan:active { transform: scale(0.9); }
+        .result-box { background: #111; padding: 15px; border-radius: 10px; margin-top: 15px; border: 1px solid #444; position: relative; }
+        .label { color: #888; font-size: 11px; text-transform: uppercase; margin-bottom: 5px; }
+        .value { font-family: monospace; font-size: 22px; color: #00ff00; }
+        .value-dec { font-size: 32px; color: #ffcc00; display: block; margin-bottom: 10px; }
+        .btn-copy { background: #444; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-size: 14px; cursor: pointer; width: 100%; font-weight: bold; }
+        .btn-copy:active { background: #666; }
+        #status { font-size: 14px; margin-top: 15px; color: #aaa; min-height: 20px; }
+        .toast { visibility: hidden; background-color: #28a745; color: white; text-align: center; border-radius: 5px; padding: 10px; position: fixed; z-index: 1; bottom: 30px; left: 50%; transform: translateX(-50%); }
+        .toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+        @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>Lector de Tags RF</h2>
-        <button class="btn-scan" id="scanBtn">ESCANEAR<br>TARJETA</button>
+        <h1>Tag Scanner</h1>
+        <button class="btn-scan" id="scanBtn">ESCANEAR<br>TAG</button>
         
         <div class="result-box">
             <div class="label">ID Hexadecimal (UID)</div>
@@ -27,52 +33,73 @@
         </div>
 
         <div class="result-box">
-            <div class="label">Código Decimal (Little-Endian)</div>
+            <div class="label">Código Decimal (Copiado)</div>
             <div id="decVal" class="value value-dec">----------</div>
+            <button class="btn-copy" id="copyBtn">📋 COPIAR DE NUEVO</button>
         </div>
 
-        <div id="status">Pulsa el botón para activar el sensor</div>
+        <div id="status">Presiona para iniciar lectura</div>
     </div>
+
+    <div id="toast" class="toast">¡Copiado al portapapeles!</div>
 
     <script>
         const scanBtn = document.getElementById('scanBtn');
+        const copyBtn = document.getElementById('copyBtn');
         const hexVal = document.getElementById('hexVal');
         const decVal = document.getElementById('decVal');
         const status = document.getElementById('status');
+        const toast = document.getElementById('toast');
+
+        function showToast() {
+            toast.className = "toast show";
+            setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
+        }
+
+        async function copyToClipboard(text) {
+            try {
+                await navigator.clipboard.writeText(text);
+                showToast();
+            } catch (err) {
+                console.error('Error al copiar: ', err);
+            }
+        }
 
         scanBtn.addEventListener('click', async () => {
             if (!('NDEFReader' in window)) {
-                alert("Tu navegador no soporta lectura NFC o estás en una conexión no segura (HTTP).");
+                alert("Por favor, usa Google Chrome en Android.");
                 return;
             }
 
             try {
                 const ndef = new NDEFReader();
                 await ndef.scan();
-                status.innerText = "📡 Sensor activo. Acerca el Tag...";
+                status.innerText = "📡 Acerca el Tag al teléfono...";
                 status.style.color = "#00ff00";
 
-                ndef.onreadingerror = () => {
-                    status.innerText = "❌ Error de lectura. Intenta de nuevo.";
-                };
-
                 ndef.onreading = ({ serialNumber }) => {
-                    // 1. Mostrar Hex Original
                     hexVal.innerText = serialNumber.toUpperCase();
                     
-                    // 2. Procesar Little-Endian (tomando 4 bytes)
                     let raw = serialNumber.replace(/:/g, '');
                     let bytes = raw.match(/.{1,2}/g).reverse();
                     let bigEndianHex = bytes.join('');
                     
-                    // 3. Convertir a Decimal con BigInt para precisión total
-                    let decimal = BigInt("0x" + bigEndianHex);
-                    decVal.innerText = decimal.toString();
+                    let decimal = BigInt("0x" + bigEndianHex).toString();
+                    decVal.innerText = decimal;
                     
-                    status.innerText = "✅ Lectura completada";
+                    copyToClipboard(decimal);
+                    
+                    status.innerText = "✅ Lectura exitosa";
                 };
             } catch (error) {
-                status.innerText = "❌ Error: " + error;
+                status.innerText = "❌ Error: Activa el NFC";
+            }
+        });
+
+        copyBtn.addEventListener('click', () => {
+            const val = decVal.innerText;
+            if (val !== "----------") {
+                copyToClipboard(val);
             }
         });
     </script>
