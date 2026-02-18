@@ -1,0 +1,16 @@
+{
+  "name": "Tag Scanner",
+  "short_name": "TagScanner",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#1a1a1a",
+  "theme_color": "#1a1a1a",
+  "icons": [
+    {
+      "src": "logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
