@@ -1,40 +1,41 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tag Scanner</title>
     
     <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#1a1a1a">
-    <link rel="manifest" href="manifest.json">
     
+    <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" href="logo.png">
     <link rel="apple-touch-icon" href="logo.png">
 
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background-color: #1a1a1a; color: white; text-align: center; padding: 20px; margin: 0; }
-        .container { background: #2d2d2d; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); max-width: 400px; margin: auto; }
-        h1 { font-size: 24px; margin-bottom: 20px; color: #fff; }
-        .btn-scan { background: #007bff; color: white; border: none; padding: 20px; border-radius: 50%; width: 110px; height: 110px; font-weight: bold; font-size: 14px; cursor: pointer; box-shadow: 0 0 15px rgba(0,123,255,0.5); margin-bottom: 20px; transition: 0.3s; }
-        .btn-scan:active { transform: scale(0.9); }
+        body { font-family: 'Segoe UI', sans-serif; background-color: #1a1a1a; color: white; text-align: center; padding: 15px; margin: 0; }
+        .container { background: #2d2d2d; padding: 20px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); max-width: 400px; margin: auto; }
+        h1 { font-size: 22px; margin-bottom: 15px; color: #fff; }
+        
+        .btn-scan { background: #007bff; color: white; border: none; padding: 15px; border-radius: 50%; width: 100px; height: 100px; font-weight: bold; font-size: 13px; cursor: pointer; box-shadow: 0 0 15px rgba(0,123,255,0.4); margin-bottom: 15px; transition: 0.3s; }
+        .btn-scan:active { transform: scale(0.95); }
+
+        .manual-input-box { background: #3d3d3d; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #555; }
+        .manual-input-box input { width: 90%; padding: 10px; border-radius: 6px; border: 1px solid #666; background: #111; color: #00ff00; text-align: center; font-family: monospace; font-size: 18px; text-transform: uppercase; outline: none; }
+
         .result-box { background: #111; padding: 15px; border-radius: 12px; margin-top: 10px; border: 1px solid #444; }
         .label { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
-        .value { font-family: 'Courier New', monospace; font-size: 20px; color: #00ff00; }
-        .value-dec { font-size: 28px; color: #ffcc00; display: block; margin-bottom: 10px; font-weight: bold; }
-        .btn-copy { background: #444; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 13px; cursor: pointer; width: 100%; font-weight: bold; text-transform: uppercase; }
-        
-        /* Estilos del Historial */
-        .history-container { margin-top: 25px; text-align: left; background: #252525; padding: 15px; border-radius: 12px; border: 1px dashed #555; }
-        .history-title { font-size: 14px; color: #bbb; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-        .history-list { list-style: none; padding: 0; margin: 0; max-height: 200px; overflow-y: auto; }
-        .history-item { background: #1a1a1a; padding: 10px; border-radius: 6px; margin-bottom: 8px; border-left: 4px solid #ffcc00; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
-        .history-item:active { background: #333; }
-        .history-item span { font-family: monospace; font-size: 16px; color: #efefef; }
-        .history-item small { color: #666; font-size: 10px; }
+        .value-dec { font-size: 28px; color: #ffcc00; display: block; margin-bottom: 10px; font-weight: bold; font-family: 'Courier New', monospace; }
+        .btn-copy { background: #444; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 13px; cursor: pointer; width: 100%; font-weight: bold; }
 
-        #status { font-size: 13px; margin-top: 15px; color: #888; min-height: 18px; }
+        .history-container { margin-top: 20px; text-align: left; background: #252525; padding: 15px; border-radius: 12px; border: 1px dashed #555; }
+        .history-title { font-size: 13px; color: #bbb; margin-bottom: 10px; display: flex; justify-content: space-between; }
+        .history-list { list-style: none; padding: 0; margin: 0; max-height: 200px; overflow-y: auto; }
+        .history-item { background: #1a1a1a; padding: 10px; border-radius: 6px; margin-bottom: 8px; border-left: 4px solid #ffcc00; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .history-item span { font-family: monospace; font-size: 16px; }
+
+        #status { font-size: 12px; margin-top: 10px; color: #888; min-height: 18px; }
         .toast { visibility: hidden; background-color: #28a745; color: white; text-align: center; border-radius: 8px; padding: 12px; position: fixed; z-index: 10; bottom: 30px; left: 50%; transform: translateX(-50%); font-weight: bold; }
         .toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
         @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
@@ -44,39 +45,45 @@
 <body>
     <div class="container">
         <h1>Tag Scanner</h1>
-        <button class="btn-scan" id="scanBtn">ESCANEAR<br>NUEVO</button>
         
-        <div class="result-box">
-            <div class="label">Última Lectura (Decimal)</div>
-            <div id="decVal" class="value value-dec">----------</div>
-            <div class="label">Hex: <span id="hexVal" class="value" style="font-size: 14px; color: #00ff00;">--:--:--:--</span></div>
-            <button class="btn-copy" id="copyBtn" style="margin-top:10px;">📋 Copiar ID</button>
+        <button class="btn-scan" id="scanBtn">ESCANEAR<br>TAG NFC</button>
+        
+        <div class="manual-input-box">
+            <div class="label" style="margin-bottom:8px;">Ingreso Manual (Hexadecimal)</div>
+            <input type="text" id="manualHex" placeholder="A1 B2 C3 D4" maxlength="11">
+            <div id="status" style="margin-top:8px;">O acerca un tag al sensor</div>
         </div>
 
-        <div id="status">Listo para trabajar</div>
+        <div class="result-box">
+            <div class="label">Código Decimal Resultante</div>
+            <div id="decVal" class="value value-dec">----------</div>
+            <button class="btn-copy" id="copyBtn">📋 Copiar al Portapapeles</button>
+        </div>
 
         <div class="history-container">
             <div class="history-title">
-                <span>LECTURAS RECIENTES</span>
-                <small style="cursor:pointer; color:#007bff;" onclick="clearHistory()">Borrar</small>
+                <span>HISTORIAL PERMANENTE</span>
+                <small style="cursor:pointer; color:#007bff;" id="clearBtn">Limpiar Todo</small>
             </div>
-            <div id="historyList" class="history-list">
-                </div>
+            <div id="historyList" class="history-list"></div>
         </div>
     </div>
 
-    <div id="toast" class="toast">¡ID Copiado!</div>
+    <div id="toast" class="toast">¡Copiado!</div>
 
     <script>
         const scanBtn = document.getElementById('scanBtn');
+        const manualInput = document.getElementById('manualHex');
         const copyBtn = document.getElementById('copyBtn');
-        const hexVal = document.getElementById('hexVal');
         const decVal = document.getElementById('decVal');
         const status = document.getElementById('status');
         const toast = document.getElementById('toast');
         const historyList = document.getElementById('historyList');
+        const clearBtn = document.getElementById('clearBtn');
 
-        let history = [];
+        // Cargar historial desde la memoria del celular al iniciar
+        let history = JSON.parse(localStorage.getItem('tagHistory')) || [];
+        renderHistory();
 
         function showToast(msg = "¡ID Copiado!") {
             toast.innerText = msg;
@@ -85,18 +92,40 @@
         }
 
         async function copyToClipboard(text) {
+            if (!text || text.includes('-')) return;
             try {
                 await navigator.clipboard.writeText(text);
                 showToast();
-            } catch (err) {
-                console.error('Error al copiar', err);
-            }
+            } catch (err) { console.error('Error al copiar', err); }
         }
 
+        function processHex(hex) {
+            try {
+                let cleanHex = hex.replace(/[:\s]/g, '');
+                if (cleanHex.length < 2) return;
+
+                let bytes = cleanHex.match(/.{1,2}/g).reverse();
+                let bigEndianHex = bytes.join('');
+                
+                let decimal = BigInt("0x" + bigEndianHex).toString();
+                decVal.innerText = decimal;
+                
+                copyToClipboard(decimal);
+                addToHistory(decimal);
+            } catch (e) { }
+        }
+
+        manualInput.addEventListener('input', (e) => {
+            if (e.target.value.length >= 8) processHex(e.target.value);
+        });
+
         function addToHistory(decimal) {
-            if (history[0] === decimal) return; // Evitar duplicados consecutivos
+            if (history[0] === decimal) return;
             history.unshift(decimal);
-            if (history.length > 10) history.pop(); // Guardar solo los últimos 10
+            if (history.length > 20) history.pop(); // Ahora guardamos hasta 20
+            
+            // Guardar en la memoria del celular
+            localStorage.setItem('tagHistory', JSON.stringify(history));
             renderHistory();
         }
 
@@ -106,52 +135,41 @@
                 const item = document.createElement('div');
                 item.className = 'history-item';
                 item.onclick = () => copyToClipboard(id);
-                item.innerHTML = `<span>${id}</span><small>Toca para copiar</small>`;
+                item.innerHTML = `<span>${id}</span><small>Copiar</small>`;
                 historyList.appendChild(item);
             });
         }
 
-        function clearHistory() {
-            history = [];
-            renderHistory();
-        }
+        clearBtn.addEventListener('click', () => {
+            if(confirm("¿Borrar todo el historial?")) {
+                history = [];
+                localStorage.removeItem('tagHistory');
+                renderHistory();
+            }
+        });
 
         scanBtn.addEventListener('click', async () => {
             if (!('NDEFReader' in window)) {
-                alert("Usa Chrome en Android.");
+                alert("NFC no compatible.");
                 return;
             }
-
             try {
                 const ndef = new NDEFReader();
                 await ndef.scan();
-                status.innerText = "📡 Acerca el Tag...";
+                status.innerText = "📡 Sensor activo...";
                 status.style.color = "#00ff00";
 
                 ndef.onreading = ({ serialNumber }) => {
-                    hexVal.innerText = serialNumber.toUpperCase();
-                    
-                    let raw = serialNumber.replace(/:/g, '');
-                    let bytes = raw.match(/.{1,2}/g).reverse();
-                    let bigEndianHex = bytes.join('');
-                    
-                    let decimal = BigInt("0x" + bigEndianHex).toString();
-                    decVal.innerText = decimal;
-                    
-                    copyToClipboard(decimal);
-                    addToHistory(decimal);
-                    
-                    status.innerText = "✅ Lectura exitosa";
+                    manualInput.value = serialNumber.toUpperCase();
+                    processHex(serialNumber);
+                    status.innerText = "✅ Leído correctamente";
                 };
             } catch (error) {
-                status.innerText = "❌ Error: Activa el NFC";
+                status.innerText = "❌ Error NFC";
             }
         });
 
-        copyBtn.addEventListener('click', () => {
-            const val = decVal.innerText;
-            if (val !== "----------") copyToClipboard(val);
-        });
+        copyBtn.addEventListener('click', () => copyToClipboard(decVal.innerText));
     </script>
 </body>
 </html>
