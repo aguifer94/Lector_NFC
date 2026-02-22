@@ -33,15 +33,16 @@
         .history-title { font-size: 13px; color: #bbb; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
         .history-list { list-style: none; padding: 0; margin: 0; max-height: 200px; overflow-y: auto; }
         .history-item { background: #1a1a1a; padding: 10px; border-radius: 6px; margin-bottom: 8px; border-left: 4px solid #ffcc00; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-        .history-item span { font-family: monospace; font-size: 16px; }
+        .history-item span { font-family: monospace; font-size: 16px; font-weight: bold; }
 
         .actions-row { display: flex; gap: 10px; }
         .btn-action { background: none; border: 1px solid #007bff; color: #007bff; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; text-transform: uppercase; font-weight: bold; }
         .btn-action.clear { border-color: #ff4444; color: #ff4444; }
 
         #status { font-size: 12px; margin-top: 10px; color: #888; min-height: 18px; }
-        .toast { visibility: hidden; background-color: #28a745; color: white; text-align: center; border-radius: 8px; padding: 12px; position: fixed; z-index: 10; bottom: 30px; left: 50%; transform: translateX(-50%); font-weight: bold; }
+        .toast { visibility: hidden; background-color: #28a745; color: white; text-align: center; border-radius: 8px; padding: 12px; position: fixed; z-index: 10; bottom: 30px; left: 50%; transform: translateX(-50%); font-weight: bold; width: 200px; }
         .toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+        .toast.warn { background-color: #f39c12; }
         @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
         @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
     </style>
@@ -89,26 +90,28 @@
         const clearBtn = document.getElementById('clearBtn');
         const downloadBtn = document.getElementById('downloadBtn');
 
-        let history = JSON.parse(localStorage.getItem('tagHistory')) || [];
+        let history = JSON.parse(localStorage.getItem('tagHistorySimple')) || [];
         renderHistory();
 
-        function showToast(msg = "¡ID Copiado!") {
+        function showToast(msg = "¡ID Copiado!", isWarn = false) {
             toast.innerText = msg;
-            toast.className = "toast show";
-            setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
+            toast.classList.remove('warn');
+            if(isWarn) toast.classList.add('warn');
+            toast.className += " show";
+            setTimeout(() => { toast.className = toast.className.replace("show", "").replace("warn", ""); }, 3000);
         }
 
         async function copyToClipboard(text) {
             if (!text || text.includes('-')) return;
             try {
                 await navigator.clipboard.writeText(text);
-                showToast();
+                showToast("¡ID Copiado!");
             } catch (err) { console.error('Error al copiar', err); }
         }
 
         function processHex(hex) {
             try {
-                let cleanHex = hex.replace(/[:\s]/g, '');
+                let cleanHex = hex.replace(/[:\s]/g, '').toUpperCase();
                 if (cleanHex.length < 2) return;
 
                 let bytes = cleanHex.match(/.{1,2}/g).reverse();
@@ -127,42 +130,48 @@
         });
 
         function addToHistory(decimal) {
-            if (history[0] === decimal) return;
+            // Verificar duplicado
+            if (history.includes(decimal)) {
+                showToast("ID ya en historial", true);
+                status.innerText = "⚠️ Tag repetido";
+                return;
+            }
+
             history.unshift(decimal);
-            if (history.length > 50) history.pop(); // Ampliado a 50 para el TXT
-            localStorage.setItem('tagHistory', JSON.stringify(history));
+            if (history.length > 100) history.pop(); // Capacidad de 100
+            
+            localStorage.setItem('tagHistorySimple', JSON.stringify(history));
             renderHistory();
         }
 
         function renderHistory() {
             historyList.innerHTML = '';
             history.forEach((id) => {
-                const item = document.createElement('div');
-                item.className = 'history-item';
-                item.onclick = () => copyToClipboard(id);
-                item.innerHTML = `<span>${id}</span><small>Copiar</small>`;
-                historyList.appendChild(item);
+                const div = document.createElement('div');
+                div.className = 'history-item';
+                div.onclick = () => copyToClipboard(id);
+                div.innerHTML = `<span>${id}</span><small>Copiar</small>`;
+                historyList.appendChild(div);
             });
         }
 
-        // Función para descargar el historial como TXT
+        // Descarga solo la lista de decimales
         downloadBtn.addEventListener('click', () => {
             if (history.length === 0) {
                 alert("El historial está vacío.");
                 return;
             }
             
-            const fecha = new Date().toLocaleDateString();
-            const contenido = "HISTORIAL DE TAGS - FECHA: " + fecha + "\n" +
-                            "-----------------------------------\n" +
-                            history.join("\n");
+            // Unir la lista con saltos de línea
+            const contenido = history.join("\n");
             
             const blob = new Blob([contenido], { type: "text/plain" });
             const url = URL.createObjectURL(blob);
             const a = document.createElement("a");
+            const fechaLabel = new Date().toISOString().slice(0,10);
             
             a.href = url;
-            a.download = `tags_scaneados_${fecha.replace(/\//g, '-')}.txt`;
+            a.download = `tags_${fechaLabel}.txt`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -170,9 +179,9 @@
         });
 
         clearBtn.addEventListener('click', () => {
-            if(confirm("¿Borrar todo el historial?")) {
+            if(confirm("¿Borrar historial?")) {
                 history = [];
-                localStorage.removeItem('tagHistory');
+                localStorage.removeItem('tagHistorySimple');
                 renderHistory();
             }
         });
@@ -191,7 +200,10 @@
                 ndef.onreading = ({ serialNumber }) => {
                     manualInput.value = serialNumber.toUpperCase();
                     processHex(serialNumber);
-                    status.innerText = "✅ Leído correctamente";
+                    if (status.innerText !== "⚠️ Tag repetido") {
+                        status.innerText = "✅ Leído";
+                        status.style.color = "#00ff00";
+                    }
                 };
             } catch (error) { status.innerText = "❌ Error NFC"; }
         });
