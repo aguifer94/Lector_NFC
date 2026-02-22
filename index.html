@@ -30,10 +30,14 @@
         .btn-copy { background: #444; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 13px; cursor: pointer; width: 100%; font-weight: bold; }
 
         .history-container { margin-top: 20px; text-align: left; background: #252525; padding: 15px; border-radius: 12px; border: 1px dashed #555; }
-        .history-title { font-size: 13px; color: #bbb; margin-bottom: 10px; display: flex; justify-content: space-between; }
+        .history-title { font-size: 13px; color: #bbb; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
         .history-list { list-style: none; padding: 0; margin: 0; max-height: 200px; overflow-y: auto; }
         .history-item { background: #1a1a1a; padding: 10px; border-radius: 6px; margin-bottom: 8px; border-left: 4px solid #ffcc00; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
         .history-item span { font-family: monospace; font-size: 16px; }
+
+        .actions-row { display: flex; gap: 10px; }
+        .btn-action { background: none; border: 1px solid #007bff; color: #007bff; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; text-transform: uppercase; font-weight: bold; }
+        .btn-action.clear { border-color: #ff4444; color: #ff4444; }
 
         #status { font-size: 12px; margin-top: 10px; color: #888; min-height: 18px; }
         .toast { visibility: hidden; background-color: #28a745; color: white; text-align: center; border-radius: 8px; padding: 12px; position: fixed; z-index: 10; bottom: 30px; left: 50%; transform: translateX(-50%); font-weight: bold; }
@@ -62,8 +66,11 @@
 
         <div class="history-container">
             <div class="history-title">
-                <span>HISTORIAL PERMANENTE</span>
-                <small style="cursor:pointer; color:#007bff;" id="clearBtn">Limpiar Todo</small>
+                <span>HISTORIAL</span>
+                <div class="actions-row">
+                    <button class="btn-action" id="downloadBtn">💾 TXT</button>
+                    <button class="btn-action clear" id="clearBtn">🗑️ Limpiar</button>
+                </div>
             </div>
             <div id="historyList" class="history-list"></div>
         </div>
@@ -80,8 +87,8 @@
         const toast = document.getElementById('toast');
         const historyList = document.getElementById('historyList');
         const clearBtn = document.getElementById('clearBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
 
-        // Cargar historial desde la memoria del celular al iniciar
         let history = JSON.parse(localStorage.getItem('tagHistory')) || [];
         renderHistory();
 
@@ -122,9 +129,7 @@
         function addToHistory(decimal) {
             if (history[0] === decimal) return;
             history.unshift(decimal);
-            if (history.length > 20) history.pop(); // Ahora guardamos hasta 20
-            
-            // Guardar en la memoria del celular
+            if (history.length > 50) history.pop(); // Ampliado a 50 para el TXT
             localStorage.setItem('tagHistory', JSON.stringify(history));
             renderHistory();
         }
@@ -139,6 +144,30 @@
                 historyList.appendChild(item);
             });
         }
+
+        // Función para descargar el historial como TXT
+        downloadBtn.addEventListener('click', () => {
+            if (history.length === 0) {
+                alert("El historial está vacío.");
+                return;
+            }
+            
+            const fecha = new Date().toLocaleDateString();
+            const contenido = "HISTORIAL DE TAGS - FECHA: " + fecha + "\n" +
+                            "-----------------------------------\n" +
+                            history.join("\n");
+            
+            const blob = new Blob([contenido], { type: "text/plain" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            
+            a.href = url;
+            a.download = `tags_scaneados_${fecha.replace(/\//g, '-')}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
 
         clearBtn.addEventListener('click', () => {
             if(confirm("¿Borrar todo el historial?")) {
@@ -164,9 +193,7 @@
                     processHex(serialNumber);
                     status.innerText = "✅ Leído correctamente";
                 };
-            } catch (error) {
-                status.innerText = "❌ Error NFC";
-            }
+            } catch (error) { status.innerText = "❌ Error NFC"; }
         });
 
         copyBtn.addEventListener('click', () => copyToClipboard(decVal.innerText));
