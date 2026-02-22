@@ -14,11 +14,16 @@
     <link rel="apple-touch-icon" href="logo.png">
 
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background-color: #1a1a1a; color: white; text-align: center; padding: 15px; margin: 0; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: #1a1a1a; color: white; text-align: center; padding: 15px; margin: 0; transition: background-color 0.3s; }
         .container { background: #2d2d2d; padding: 20px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); max-width: 400px; margin: auto; }
+        
+        /* Estilo para error de duplicado evidente */
+        body.duplicate-error { background-color: #7b1111; }
+        body.duplicate-error .container { border: 2px solid #ff4444; }
+
         h1 { font-size: 22px; margin-bottom: 15px; color: #fff; }
         
-        .btn-scan { background: #007bff; color: white; border: none; padding: 15px; border-radius: 50%; width: 100px; height: 100px; font-weight: bold; font-size: 13px; cursor: pointer; box-shadow: 0 0 15px rgba(0,123,255,0.4); margin-bottom: 15px; transition: 0.3s; }
+        .btn-scan { background: #007bff; color: white; border: none; padding: 15px; border-radius: 50%; width: 100px; height: 100px; font-weight: bold; font-size: 13px; cursor: pointer; box-shadow: 0 0 15px rgba(0,123,255,0.4); margin-bottom: 15px; transition: 0.3s; z-index: 5; position: relative; }
         .btn-scan:active { transform: scale(0.95); }
 
         .manual-input-box { background: #3d3d3d; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #555; }
@@ -39,12 +44,9 @@
         .btn-action { background: none; border: 1px solid #007bff; color: #007bff; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; text-transform: uppercase; font-weight: bold; }
         .btn-action.clear { border-color: #ff4444; color: #ff4444; }
 
-        #status { font-size: 12px; margin-top: 10px; color: #888; min-height: 18px; }
-        .toast { visibility: hidden; background-color: #28a745; color: white; text-align: center; border-radius: 8px; padding: 12px; position: fixed; z-index: 10; bottom: 30px; left: 50%; transform: translateX(-50%); font-weight: bold; width: 200px; }
-        .toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
-        .toast.warn { background-color: #f39c12; }
-        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
-        @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+        #status { font-size: 14px; margin-top: 10px; color: #888; min-height: 20px; font-weight: bold; }
+        .warning-text { color: #ff4444; font-size: 18px; display: none; margin-top: 10px; animation: blink 0.5s infinite alternate; }
+        @keyframes blink { from { opacity: 1; } to { opacity: 0.5; } }
     </style>
 </head>
 <body>
@@ -53,16 +55,18 @@
         
         <button class="btn-scan" id="scanBtn">ESCANEAR<br>TAG NFC</button>
         
-        <div class="manual-input-box">
-            <div class="label" style="margin-bottom:8px;">Ingreso Manual (Hexadecimal)</div>
+        <div id="status">Presiona para iniciar</div>
+        <div id="duplicateWarning" class="warning-text">⚠️ TAG YA REGISTRADO ⚠️</div>
+
+        <div class="manual-input-box" style="margin-top: 15px;">
+            <div class="label" style="margin-bottom:8px;">Ingreso Manual (Hex)</div>
             <input type="text" id="manualHex" placeholder="A1 B2 C3 D4" maxlength="11">
-            <div id="status" style="margin-top:8px;">O acerca un tag al sensor</div>
         </div>
 
         <div class="result-box">
-            <div class="label">Código Decimal Resultante</div>
+            <div class="label">Último Código</div>
             <div id="decVal" class="value value-dec">----------</div>
-            <button class="btn-copy" id="copyBtn">📋 Copiar al Portapapeles</button>
+            <button class="btn-copy" id="copyBtn">📋 Copiar Decimal</button>
         </div>
 
         <div class="history-container">
@@ -77,15 +81,12 @@
         </div>
     </div>
 
-    <div id="toast" class="toast">¡Copiado!</div>
-
     <script>
         const scanBtn = document.getElementById('scanBtn');
         const manualInput = document.getElementById('manualHex');
-        const copyBtn = document.getElementById('copyBtn');
         const decVal = document.getElementById('decVal');
         const status = document.getElementById('status');
-        const toast = document.getElementById('toast');
+        const duplicateWarning = document.getElementById('duplicateWarning');
         const historyList = document.getElementById('historyList');
         const clearBtn = document.getElementById('clearBtn');
         const downloadBtn = document.getElementById('downloadBtn');
@@ -93,20 +94,21 @@
         let history = JSON.parse(localStorage.getItem('tagHistorySimple')) || [];
         renderHistory();
 
-        function showToast(msg = "¡ID Copiado!", isWarn = false) {
-            toast.innerText = msg;
-            toast.classList.remove('warn');
-            if(isWarn) toast.classList.add('warn');
-            toast.className += " show";
-            setTimeout(() => { toast.className = toast.className.replace("show", "").replace("warn", ""); }, 3000);
+        function setDuplicateError(isError) {
+            if (isError) {
+                document.body.classList.add('duplicate-error');
+                duplicateWarning.style.display = 'block';
+                status.style.display = 'none';
+            } else {
+                document.body.classList.remove('duplicate-error');
+                duplicateWarning.style.display = 'none';
+                status.style.display = 'block';
+            }
         }
 
         async function copyToClipboard(text) {
             if (!text || text.includes('-')) return;
-            try {
-                await navigator.clipboard.writeText(text);
-                showToast("¡ID Copiado!");
-            } catch (err) { console.error('Error al copiar', err); }
+            try { await navigator.clipboard.writeText(text); } catch (err) { }
         }
 
         function processHex(hex) {
@@ -116,12 +118,21 @@
 
                 let bytes = cleanHex.match(/.{1,2}/g).reverse();
                 let bigEndianHex = bytes.join('');
-                
                 let decimal = BigInt("0x" + bigEndianHex).toString();
-                decVal.innerText = decimal;
                 
+                // Si el tag ya está en el historial
+                if (history.includes(decimal)) {
+                    setDuplicateError(true);
+                    return;
+                }
+
+                // Si llegamos aquí es un tag nuevo:
+                setDuplicateError(false); // Limpiar error si existía
+                decVal.innerText = decimal;
                 copyToClipboard(decimal);
                 addToHistory(decimal);
+                status.innerText = "✅ Leído: " + decimal;
+                status.style.color = "#00ff00";
             } catch (e) { }
         }
 
@@ -130,16 +141,8 @@
         });
 
         function addToHistory(decimal) {
-            // Verificar duplicado
-            if (history.includes(decimal)) {
-                showToast("ID ya en historial", true);
-                status.innerText = "⚠️ Tag repetido";
-                return;
-            }
-
             history.unshift(decimal);
-            if (history.length > 100) history.pop(); // Capacidad de 100
-            
+            if (history.length > 100) history.pop();
             localStorage.setItem('tagHistorySimple', JSON.stringify(history));
             renderHistory();
         }
@@ -149,32 +152,24 @@
             history.forEach((id) => {
                 const div = document.createElement('div');
                 div.className = 'history-item';
-                div.onclick = () => copyToClipboard(id);
+                div.onclick = () => {
+                    copyToClipboard(id);
+                    decVal.innerText = id;
+                };
                 div.innerHTML = `<span>${id}</span><small>Copiar</small>`;
                 historyList.appendChild(div);
             });
         }
 
-        // Descarga solo la lista de decimales
         downloadBtn.addEventListener('click', () => {
-            if (history.length === 0) {
-                alert("El historial está vacío.");
-                return;
-            }
-            
-            // Unir la lista con saltos de línea
+            if (history.length === 0) return;
             const contenido = history.join("\n");
-            
             const blob = new Blob([contenido], { type: "text/plain" });
             const url = URL.createObjectURL(blob);
             const a = document.createElement("a");
-            const fechaLabel = new Date().toISOString().slice(0,10);
-            
             a.href = url;
-            a.download = `tags_${fechaLabel}.txt`;
-            document.body.appendChild(a);
+            a.download = `tags_${new Date().toISOString().slice(0,10)}.txt`;
             a.click();
-            document.body.removeChild(a);
             URL.revokeObjectURL(url);
         });
 
@@ -183,6 +178,7 @@
                 history = [];
                 localStorage.removeItem('tagHistorySimple');
                 renderHistory();
+                setDuplicateError(false);
             }
         });
 
@@ -194,21 +190,15 @@
             try {
                 const ndef = new NDEFReader();
                 await ndef.scan();
-                status.innerText = "📡 Sensor activo...";
-                status.style.color = "#00ff00";
+                setDuplicateError(false);
+                status.innerText = "📡 BUSCANDO TAG...";
+                status.style.color = "#007bff";
 
                 ndef.onreading = ({ serialNumber }) => {
-                    manualInput.value = serialNumber.toUpperCase();
                     processHex(serialNumber);
-                    if (status.innerText !== "⚠️ Tag repetido") {
-                        status.innerText = "✅ Leído";
-                        status.style.color = "#00ff00";
-                    }
                 };
-            } catch (error) { status.innerText = "❌ Error NFC"; }
+            } catch (error) { status.innerText = "❌ ERROR NFC"; }
         });
-
-        copyBtn.addEventListener('click', () => copyToClipboard(decVal.innerText));
     </script>
 </body>
 </html>
