@@ -198,6 +198,14 @@
         };
         
         document.getElementById('copyBtn').onclick = () => navigator.clipboard.writeText(decVal.innerText);
+        if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('App lista para uso offline'))
+            .catch(err => console.log('Error de registro', err));
+    });
+        }
+        
     </script>
 </body>
 </html>
