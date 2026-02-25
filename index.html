@@ -3,19 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Tag Scanner</title>
+    <title>Tag Scanner Pro</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="TagScanner">
     <link rel="apple-touch-icon" href="logo.png">
-
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#1a1a1a">
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" href="logo.png">
 
     <style>
+        /* --- ESTILOS DEL SPLASH SCREEN --- */
+        #splash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #1a1a1a;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease, visibility 0.5s;
+        }
+        #splash img {
+            width: 150px;
+            height: 150px;
+            border-radius: 30px;
+            box-shadow: 0 0 30px rgba(0, 123, 255, 0.3);
+            margin-bottom: 20px;
+        }
+        #splash .loader {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #333;
+            border-top: 4px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* --- ESTILOS DE LA APP --- */
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #1a1a1a; color: white; text-align: center; padding: 15px; margin: 0; transition: background-color 0.3s; -webkit-tap-highlight-color: transparent; }
         .container { background: #2d2d2d; padding: 20px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); max-width: 400px; margin: auto; }
         
@@ -48,8 +80,14 @@
     </style>
 </head>
 <body>
+
+    <div id="splash">
+        <img src="logo.png" alt="Logo">
+        <div class="loader"></div>
+    </div>
+
     <div class="container">
-        <h1>Tag Scanner</h1>
+        <h1>Tag Scanner Pro</h1>
         
         <button class="btn-scan" id="scanBtn">ESCANEAR<br>NFC</button>
         <div id="status">Compatible con Android</div>
@@ -79,6 +117,18 @@
     </div>
 
     <script>
+        // --- LÓGICA DEL SPLASH SCREEN ---
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const splash = document.getElementById('splash');
+                splash.style.opacity = '0';
+                setTimeout(() => {
+                    splash.style.visibility = 'hidden';
+                }, 500);
+            }, 1200); // Se queda 1.2 segundos
+        });
+
+        // --- RESTO DE LA LÓGICA DE LA APP ---
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
         const scanBtn = document.getElementById('scanBtn');
         const iosNotice = document.getElementById('iosNotice');
@@ -154,33 +204,19 @@
 
         document.getElementById('downloadBtn').onclick = () => {
             if (history.length === 0) return;
-            
             const now = new Date();
-            const day = String(now.getDate()).padStart(2, '0');
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const year = now.getFullYear();
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            
-            const fileName = `Tags-${day}-${month}-${year}-${hours}-${minutes}.txt`;
-            const contenido = history.join("\n");
-            
-            const blob = new Blob([contenido], { type: "text/plain" });
+            const fileName = `Tags-${String(now.getDate()).padStart(2,'0')}-${String(now.getMonth()+1).padStart(2,'0')}-${now.getFullYear()}-${String(now.getHours()).padStart(2,'0')}-${String(now.getMinutes()).padStart(2,'0')}.txt`;
+            const blob = new Blob([history.join("\n")], { type: "text/plain" });
             const a = document.createElement("a");
             a.href = URL.createObjectURL(blob);
             a.download = fileName;
             a.click();
-            URL.revokeObjectURL(a.href);
         };
 
         document.getElementById('clearBtn').onclick = () => {
-            if(confirm("¿Borrar todo el historial?")) { 
-                history=[]; 
-                localStorage.removeItem('tagHistorySimple'); 
-                renderHistory(); 
-                updateCount(); 
-                setDuplicateError(false);
-                decVal.innerText = '----------';
+            if(confirm("¿Borrar historial?")) { 
+                history=[]; localStorage.removeItem('tagHistorySimple'); renderHistory(); updateCount(); 
+                setDuplicateError(false); decVal.innerText = '----------';
             }
         };
 
@@ -194,18 +230,17 @@
                     manualInput.value = serialNumber.toUpperCase();
                     processHex(serialNumber);
                 };
-            } catch (e) { alert("NFC no disponible o desactivado"); }
+            } catch (e) { alert("NFC no compatible"); }
         };
         
         document.getElementById('copyBtn').onclick = () => navigator.clipboard.writeText(decVal.innerText);
+
+        // Registro del Service Worker para modo Offline
         if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-            .then(reg => console.log('App lista para uso offline'))
-            .catch(err => console.log('Error de registro', err));
-    });
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').catch(err => console.log(err));
+            });
         }
-        
     </script>
 </body>
 </html>
