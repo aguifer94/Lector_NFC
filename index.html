@@ -9,6 +9,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="TagScanner">
     <link rel="apple-touch-icon" href="logo.png">
+
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#1a1a1a">
     <link rel="manifest" href="manifest.json">
@@ -28,22 +29,36 @@
             justify-content: center;
             align-items: center;
             z-index: 9999;
-            transition: opacity 0.5s ease, visibility 0.5s;
+            transition: opacity 0.6s ease, visibility 0.6s;
+        }
+        .splash-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
         #splash img {
-            width: 150px;
-            height: 150px;
-            border-radius: 30px;
-            box-shadow: 0 0 30px rgba(0, 123, 255, 0.3);
-            margin-bottom: 20px;
+            width: 140px;
+            height: 140px;
+            border-radius: 25px;
+            box-shadow: 0 0 40px rgba(0, 123, 255, 0.2);
+            margin-bottom: 25px;
         }
         #splash .loader {
-            width: 40px;
-            height: 40px;
-            border: 4px solid #333;
-            border-top: 4px solid #007bff;
+            width: 30px;
+            height: 30px;
+            border: 3px solid #333;
+            border-top: 3px solid #007bff;
             border-radius: 50%;
             animation: spin 1s linear infinite;
+        }
+        .powered-by {
+            margin-bottom: 40px;
+            font-size: 14px;
+            color: #666;
+            letter-spacing: 1px;
+            text-transform: uppercase;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
@@ -82,8 +97,11 @@
 <body>
 
     <div id="splash">
-        <img src="logo.png" alt="Logo">
-        <div class="loader"></div>
+        <div class="splash-content">
+            <img src="logo.png" alt="Logo">
+            <div class="loader"></div>
+        </div>
+        <div class="powered-by">Powered by <span style="color: #007bff; font-weight: bold;">Expoluz</span></div>
     </div>
 
     <div class="container">
@@ -124,11 +142,10 @@
                 splash.style.opacity = '0';
                 setTimeout(() => {
                     splash.style.visibility = 'hidden';
-                }, 500);
-            }, 1200); // Se queda 1.2 segundos
+                }, 600);
+            }, 1200); 
         });
 
-        // --- RESTO DE LA LÓGICA DE LA APP ---
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
         const scanBtn = document.getElementById('scanBtn');
         const iosNotice = document.getElementById('iosNotice');
@@ -230,7 +247,7 @@
                     manualInput.value = serialNumber.toUpperCase();
                     processHex(serialNumber);
                 };
-            } catch (e) { alert("NFC no compatible"); }
+            } catch (e) { alert("NFC no compatible o bloqueado."); }
         };
         
         document.getElementById('copyBtn').onclick = () => navigator.clipboard.writeText(decVal.innerText);
